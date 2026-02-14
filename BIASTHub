@@ -1,0 +1,136 @@
+--[[
+	WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!
+]]
+
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+
+local Window = Rayfield:CreateWindow({
+    Name = "BIAST",
+    LoadingTitle = "Zzz",
+    LoadingSubtitle = "by None",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = "RayfieldConfig",
+        FileName = "ESP_Stamina_Config"
+    }
+})
+
+
+local MainTab = Window:CreateTab("Main", 4483362458) 
+
+
+local staminaLoop = false
+local espEnabled = false
+local espConnections = {}
+
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local Items = workspace:WaitForChild("Items")
+
+local function startStaminaLoop()
+    staminaLoop = true
+    task.spawn(function()
+        while staminaLoop do
+            for _, teamFolder in pairs(workspace.Characters:GetChildren()) do
+                for _, model in pairs(teamFolder:GetChildren()) do
+                    local stamina = model:FindFirstChild("Stamina")
+                    if stamina and stamina:IsA("NumberValue") then
+                        stamina.Value = 100
+                    end
+                end
+            end
+            task.wait()
+        end
+    end)
+end
+
+local function stopStaminaLoop()
+    staminaLoop = false
+end
+
+local function getPart(item)
+    if item:IsA("BasePart") then
+        return item
+    elseif item:IsA("Model") then
+        return item:FindFirstChildWhichIsA("BasePart")
+    end
+    return nil
+end
+
+local function createTextESP(item)
+    local part = getPart(item)
+    if not part then return end
+    if part:FindFirstChild("ItemESP") then return end
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "ItemESP"
+    billboard.Adornee = part
+    billboard.Size = UDim2.new(0, 100, 0, 30)
+    billboard.StudsOffset = Vector3.new(0, 2, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Parent = part
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.TextColor3 = Color3.fromRGB(255, 255, 0)
+    label.TextStrokeTransparency = 0
+    label.Text = item.Name
+    label.TextScaled = true
+    label.Font = Enum.Font.SourceSansBold
+    label.Parent = billboard
+end
+
+local function enableESP()
+    for _, item in pairs(Items:GetChildren()) do
+        createTextESP(item)
+    end
+    espConnections[#espConnections + 1] = Items.ChildAdded:Connect(function(item)
+        createTextESP(item)
+    end)
+end
+
+local function disableESP()
+    for _, item in pairs(Items:GetChildren()) do
+        local part = getPart(item)
+        if part then
+            local esp = part:FindFirstChild("ItemESP")
+            if esp then
+                esp:Destroy()
+            end
+        end
+    end
+    for _, conn in pairs(espConnections) do
+        conn:Disconnect()
+    end
+    espConnections = {}
+end
+
+MainTab:CreateToggle({
+    Name = "Infinite Stamina",
+    CurrentValue = false,
+    Flag = "StaminaToggle",
+    Callback = function(state)
+        if state then
+            startStaminaLoop()
+        else
+            stopStaminaLoop()
+        end
+    end
+})
+
+MainTab:CreateToggle({
+    Name = "Item ESP",
+    CurrentValue = false,
+    Flag = "ESPToggle",
+    Callback = function(state)
+        if state then
+            enableESP()
+        else
+            disableESP()
+        end
+    end
+})
